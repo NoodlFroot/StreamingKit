@@ -599,6 +599,8 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
     pthread_cond_destroy(&mainThreadSyncCallReadyCondition);
     
     free(readBuffer);
+	
+	free(pcmAudioBufferList.mBuffers[0].mData); // Suggested in https://github.com/tumtumtum/StreamingKit/pull/239/files#diff-0
 }
 
 -(void) startSystemBackgroundTask
