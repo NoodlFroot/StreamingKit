@@ -1031,7 +1031,7 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
     return retval;
 }
 
--(BOOL) invokeOnPlaybackThread:(void(^)())block
+-(BOOL) invokeOnPlaybackThread:(void(^)(void))block
 {
 	NSRunLoop* runLoop = playbackThreadRunLoop;
 	
@@ -1235,7 +1235,7 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
     [self wakeupPlaybackThread];
 }
 
--(void) dispatchSyncOnMainThread:(void(^)())block
+-(void) dispatchSyncOnMainThread:(void(^)(void))block
 {
 	__block BOOL finished = NO;
 
@@ -1277,7 +1277,7 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
     pthread_mutex_unlock(&mainThreadSyncCallMutex);
 }
 
--(void) playbackThreadQueueMainThreadSyncBlock:(void(^)())block
+-(void) playbackThreadQueueMainThreadSyncBlock:(void(^)(void))block
 {
     block = [block copy];
     
