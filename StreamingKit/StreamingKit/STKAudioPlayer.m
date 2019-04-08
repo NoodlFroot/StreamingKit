@@ -283,7 +283,7 @@ static AudioStreamBasicDescription recordAudioStreamBasicDescription;
     UInt32 recordPacketSize;
     AudioStreamPacketDescription *recordPacketDescriptions;
     
-	void(^stopBackBackgroundTaskBlock)();
+	void(^stopBackBackgroundTaskBlock)(void);
     
     int32_t seekVersion;
     OSSpinLock seekLock;
@@ -1203,7 +1203,7 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
         {
             [self playbackThreadQueueMainThreadSyncBlock:^
             {
-                [self.delegate audioPlayer:self didFinishPlayingQueueItemId:queueItemId withReason:stopReason andProgress:progress andDuration:duration];
+				[self.delegate audioPlayer:self didFinishPlayingQueueItemId:queueItemId withReason:self->stopReason andProgress:progress andDuration:duration];
             }];
         }
         
@@ -1227,7 +1227,7 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
         {
             [self playbackThreadQueueMainThreadSyncBlock:^
             {
-				[self.delegate audioPlayer:self didFinishPlayingQueueItemId:queueItemId withReason:stopReason andProgress:progress andDuration:duration];
+				[self.delegate audioPlayer:self didFinishPlayingQueueItemId:queueItemId withReason:self->stopReason andProgress:progress andDuration:duration];
             }];
         }
     }
@@ -1246,15 +1246,15 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
 
 	dispatch_async(dispatch_get_main_queue(), ^
 	{
-		if (!disposeWasRequested)
+		if (!self->disposeWasRequested)
 		{
 			block();
 		}
 
-		pthread_mutex_lock(&mainThreadSyncCallMutex);
+		pthread_mutex_lock(&self->mainThreadSyncCallMutex);
 		finished = YES;
-		pthread_cond_signal(&mainThreadSyncCallReadyCondition);
-		pthread_mutex_unlock(&mainThreadSyncCallMutex);
+		pthread_cond_signal(&self->mainThreadSyncCallReadyCondition);
+		pthread_mutex_unlock(&self->mainThreadSyncCallMutex);
 	});
 
     pthread_mutex_lock(&mainThreadSyncCallMutex);
@@ -1283,7 +1283,7 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
     
     [self invokeOnPlaybackThread:^
     {
-        if (disposeWasRequested)
+		if (self->disposeWasRequested)
         {
             return;
         }
@@ -1773,26 +1773,26 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
 		
         [self invokeOnPlaybackThread:^
         {
-            pthread_mutex_lock(&playerMutex);
+			pthread_mutex_lock(&self->playerMutex);
             {
-                currentlyReadingEntry.dataSource.delegate = nil;
-                [currentlyReadingEntry.dataSource unregisterForEvents];
-                [currentlyReadingEntry.dataSource close];
+				self->currentlyReadingEntry.dataSource.delegate = nil;
+				[self->currentlyReadingEntry.dataSource unregisterForEvents];
+				[self->currentlyReadingEntry.dataSource close];
                 
-                if (currentlyPlayingEntry)
+				if (self->currentlyPlayingEntry)
                 {
-                    [self processFinishPlayingIfAnyAndPlayingNext:currentlyPlayingEntry withNext:nil];
+					[self processFinishPlayingIfAnyAndPlayingNext:self->currentlyPlayingEntry withNext:nil];
                 }
                 
                 [self clearQueue];
                 
-                OSSpinLockLock(&currentEntryReferencesLock);
-                currentlyPlayingEntry = nil;
-                currentlyReadingEntry = nil;
-                seekToTimeWasRequested = NO;
-                OSSpinLockUnlock(&currentEntryReferencesLock);
+				OSSpinLockLock(&self->currentEntryReferencesLock);
+				self->currentlyPlayingEntry = nil;
+				self->currentlyReadingEntry = nil;
+				self->seekToTimeWasRequested = NO;
+				OSSpinLockUnlock(&self->currentEntryReferencesLock);
             }
-            pthread_mutex_unlock(&playerMutex);
+			pthread_mutex_unlock(&self->playerMutex);
         }];
         
 		[self wakeupPlaybackThread];
@@ -1812,7 +1812,7 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
         
         [self invokeOnPlaybackThread:^
         {
-            disposeWasRequested = YES;
+			self->disposeWasRequested = YES;
             
             CFRunLoopStop(CFRunLoopGetCurrent());
         }];
@@ -3278,17 +3278,17 @@ static OSStatus OutputRenderCallback(void* inRefCon, AudioUnitRenderActionFlags*
 				return;
 			}
 			
-			peakPowerDb[0] = MIN(MAX(decibelsLeft, -60), 0);
-			peakPowerDb[1] = MIN(MAX(decibelsRight, -60), 0);
+			self->peakPowerDb[0] = MIN(MAX(decibelsLeft, -60), 0);
+			self->peakPowerDb[1] = MIN(MAX(decibelsRight, -60), 0);
 			
 			if (countLeft > 0)
 			{
-				averagePowerDb[0] = MIN(MAX(totalValueLeft / frameCount, -60), 0);
+				self->averagePowerDb[0] = MIN(MAX(totalValueLeft / frameCount, -60), 0);
 			}
 			
 			if (countRight != 0)
 			{
-				averagePowerDb[1] = MIN(MAX(totalValueRight / frameCount, -60), 0);
+				self->averagePowerDb[1] = MIN(MAX(totalValueRight / frameCount, -60), 0);
 			}
 		}];
 	}
