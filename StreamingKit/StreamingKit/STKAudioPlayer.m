@@ -1196,7 +1196,7 @@ static void AudioFileStreamPacketsProc(void* clientData, UInt32 numberBytes, UIn
         
         OSSpinLockLock(&currentEntryReferencesLock);
         currentlyPlayingEntry = next;
-        NSObject* playingQueueItemId = playingQueueItemId = currentlyPlayingEntry.queueItemId;
+        NSObject* playingQueueItemId = currentlyPlayingEntry.queueItemId;
         OSSpinLockUnlock(&currentEntryReferencesLock);
         
         if (!isPlayingSameItemProbablySeek && entry)
